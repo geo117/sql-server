@@ -12,6 +12,7 @@ const COLUMNS = [
   { key: 'login_name', label: 'Usuario' },
   { key: 'host_name', label: 'Host' },
   { key: 'program_name', label: 'Programa' },
+  { key: 'database_name', label: 'BD' },
   { key: 'status', label: 'Estado' },
   { key: 'cpu_time', label: 'CPU (ms)', numeric: true },
   { key: 'logical_reads', label: 'Lecturas lógicas', numeric: true },
@@ -53,7 +54,7 @@ export default function ActiveProcessesTable({
       if (filter === 'slow' && !isSlowQuery(row.elapsed_time_ms, slowQueryMs)) return false
       if (!needle) return true
 
-      return [row.session_id, row.login_name, row.host_name, row.program_name, row.statement_text]
+      return [row.session_id, row.login_name, row.host_name, row.program_name, row.database_name, row.statement_text]
         .filter(Boolean)
         .some((value) => String(value).toLowerCase().includes(needle))
     })
@@ -106,7 +107,7 @@ export default function ActiveProcessesTable({
               type="search"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              placeholder="Buscar usuario, host o SPID"
+              placeholder="Buscar usuario, host, BD o SPID"
               aria-label="Buscar en procesos activos"
               style={{ paddingLeft: 32, width: 240, maxWidth: '100%' }}
             />
@@ -196,6 +197,9 @@ export default function ActiveProcessesTable({
                     </td>
                     <td className="cell-truncate" title={row.program_name ?? ''}>
                       {row.program_name ?? '—'}
+                    </td>
+                    <td className="cell-truncate" title={row.database_name ?? ''}>
+                      {row.database_name ?? '—'}
                     </td>
                     <td>
                       <StatusPill status={row.status} />

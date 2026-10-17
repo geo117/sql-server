@@ -1,0 +1,72 @@
+[
+  {
+    "id": "F-01",
+    "severity": "high",
+    "title": "Existencia de archivo .env con credenciales en texto plano",
+    "target": "backend/.env",
+    "description": "Se detectó el archivo `.env` en el directorio backend que contiene credenciales por defecto (DB_USER, DB_PASSWORD). Aunque no se subió a git remoto (asumiendo .gitignore), el archivo local almacena credenciales sin cifrar.",
+    "impact": "Exposición de credenciales ante acceso no autorizado al servidor o volcado de directorios.",
+    "recommendation": "Asegurar permisos estrictos del archivo (chmod 600) y verificar que `.gitignore` excluya explícitamente `.env`.",
+    "state": "confirmed"
+  },
+  {
+    "id": "F-02",
+    "severity": "high",
+    "title": "Cifrado de conexión ODBC desactivado por defecto (Encrypt=no)",
+    "target": "backend/database.py",
+    "description": "En `database.py`, `DB_ENCRYPT` toma por defecto el valor `no` y `DB_TRUST_SERVER_CERTIFICATE` toma `yes`.",
+    "impact": "Las credenciales y los datos de las consultas viajan en texto plano a través de la red entre el backend y SQL Server si no se fuerza en producción.",
+    "recommendation": "Cambiar el valor por defecto de `DB_ENCRYPT` a `yes` para producción en `database.py` y exigir certificados válidos.",
+    "state": "confirmed"
+  },
+  {
+    "id": "F-03",
+    "severity": "medium",
+    "title": "Canal WebSocket `/ws/monitor` sin autenticación por API Key",
+    "target": "backend/main.py",
+    "description": "El endpoint WebSocket `/ws/monitor` no incluye la dependencia `require_api_key` ni validación de cabeceras.",
+    "impact": "Cualquier cliente que alcance el servidor WebSocket puede obtener snapshots en tiempo real de los procesos activos, bloqueos y estadísticas del servidor sin autenticarse, incluso cuando `API_KEY` está configurada.",
+    "recommendation": "Agregar autenticación por API key en el momento de la conexión WebSocket (por ejemplo, mediante query param o protocolo inicial).",
+    "state": "confirmed"
+  },
+  {
+    "id": "F-04",
+    "severity": "medium",
+    "title": "Almacenamiento de API Key en localStorage del navegador",
+    "target": "frontend/src/services/settings.js",
+    "description": "La API Key ingresada por el operador se guarda en `window.localStorage` en texto plano.",
+    "impact": "Cualquier script malicioso (XSS) ejecutándose en el origen de la aplicación puede leer la API Key y utilizarla contra el backend.",
+    "recommendation": "Evaluar el almacenamiento en cookies seguras (HttpOnly) gestionadas por el backend, o advertir claramente sobre los riesgos de XSS en la SPA.",
+    "state": "confirmed"
+  },
+  {
+    "id": "F-05",
+    "severity": "medium",
+    "title": "Configuración de credenciales de base de datos vacías en entorno por defecto",
+    "target": "backend/database.py",
+    "description": "Si `DB_TRUSTED_CONNECTION` es false pero `DB_USER` o `DB_PASSWORD` están vacíos, la conexión ODBC fallará o intentará autenticación vacía.",
+    "impact": "Falla de servicio (DoS local) si la configuración no está completa.",
+    "recommendation": "Validar en la inicialización de `database.py` que las credenciales estén completas cuando no se usa Trusted Connection.",
+    "state": "confirmed"
+  },
+  {
+    "id": "F-06",
+    "severity": "low",
+    "title": "Divulgación de estado de autenticación en endpoint `/api/health`",
+    "target": "backend/main.py",
+    "description": "El endpoint `/api/health` devuelve `auth_required: bool(API_KEY)` sin requerir autenticación.",
+    "impact": "Permite a un atacante externo conocer si la API key está activada en el servidor (reconocimiento).",
+    "recommendation": "Mantener `auth_required` solo si es estrictamente necesario para el frontend, o limitar la información pública.",
+    "state": "confirmed"
+  },
+  {
+    "id": "F-07",
+    "severity": "informational",
+    "title": "Dependencia `apscheduler` no utilizada en código activo",
+    "target": "backend/requirements.txt",
+    "description": "`apscheduler` está listado en `requirements.txt` pero no se referencia en `main.py` ni `database.py`.",
+    "impact": "Superficie de ataque innecesaria por dependencias no usadas.",
+    "recommendation": "Eliminar `apscheduler` de `requirements.txt` si no se utiliza.",
+    "state": "confirmed"
+  }
+]

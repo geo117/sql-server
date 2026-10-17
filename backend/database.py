@@ -37,13 +37,19 @@ DB_USER = os.getenv("DB_USER", "")
 DB_PASSWORD = os.getenv("DB_PASSWORD", "")
 DB_DRIVER = os.getenv("DB_DRIVER", "{ODBC Driver 17 for SQL Server}")
 DB_TRUSTED_CONNECTION = _env_bool("DB_TRUSTED_CONNECTION", False)
-DB_ENCRYPT = os.getenv("DB_ENCRYPT", "no")
-DB_TRUST_SERVER_CERTIFICATE = os.getenv("DB_TRUST_SERVER_CERTIFICATE", "yes")
+DB_ENCRYPT = os.getenv("DB_ENCRYPT", "yes")
+DB_TRUST_SERVER_CERTIFICATE = os.getenv("DB_TRUST_SERVER_CERTIFICATE", "no")
 DB_TIMEOUT = int(os.getenv("DB_TIMEOUT", "5"))
 
 
 def build_connection_string() -> str:
     """Construye la cadena ODBC segun el modo de autenticacion activo."""
+    if not DB_TRUSTED_CONNECTION and (not DB_USER or not DB_PASSWORD):
+        raise RuntimeError(
+            "Configuración de base de datos incompleta: DB_TRUSTED_CONNECTION=no "
+            "requiere DB_USER y DB_PASSWORD definidos."
+        )
+
     parts = [
         f"DRIVER={DB_DRIVER}",
         f"SERVER={DB_SERVER}",

@@ -3,4 +3,3 @@ uvicorn[standard]>=0.22.0
 pyodbc>=4.0.39
 pydantic>=2.0
 python-dotenv>=1.0.0
-apscheduler>=3.10.1

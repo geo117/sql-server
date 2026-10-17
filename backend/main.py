@@ -122,6 +122,7 @@ SELECT
     r.writes,
     r.logical_reads,
     r.blocking_session_id,
+    DB_NAME(r.database_id) AS database_name,
     SUBSTRING(st.text, (r.statement_start_offset/2) + 1,
         ((CASE r.statement_end_offset
             WHEN -1 THEN DATALENGTH(st.text)
@@ -224,10 +225,10 @@ async def health() -> dict[str, Any]:
             with conn.cursor() as cursor:
                 cursor.execute("SELECT 1")
                 cursor.fetchone()
-        return {"status": "online", "database": "reachable", "auth_required": bool(API_KEY)}
+        return {"status": "online", "database": "reachable"}
     except Exception as exc:  # noqa: BLE001 - se reporta como estado, no como 500
         logger.warning("Health check sin base de datos: %s", exc)
-        return {"status": "degraded", "database": "unreachable", "auth_required": bool(API_KEY)}
+        return {"status": "degraded", "database": "unreachable"}
 
 
 @app.get("/api/active-processes", tags=["monitoreo"], dependencies=[Depends(require_api_key)])
@@ -354,8 +355,20 @@ async def kill_process(spid: str, request: Request) -> dict[str, Any]:
 # WebSocket: snapshots en vivo (opcional; el frontend usa polling por defecto)
 # --------------------------------------------------------------------------- #
 @app.websocket("/ws/monitor")
-async def monitor_socket(websocket: WebSocket, interval: float = 5.0) -> None:
-    """Empuja el snapshot combinado cada `interval` segundos."""
+async def monitor_socket(
+    websocket: WebSocket,
+    interval: float = 5.0,
+    api_key: str | None = None,
+) -> None:
+    """Empuja el snapshot combinado cada `interval` segundos.
+
+    La autenticación se realiza mediante el query parameter `api_key` porque
+    los WebSocket no exponen cabeceras HTTP de inyección como los endpoints REST.
+    """
+    if API_KEY:
+        if not api_key or not _constant_time_equals(api_key, API_KEY):
+            await websocket.close(code=4401)
+            return
     await websocket.accept()
     safe_interval = min(max(interval, 1.0), 30.0)
     try:
@@ -382,3 +395,8 @@ async def monitor_socket(websocket: WebSocket, interval: float = 5.0) -> None:
     except Exception:  # noqa: BLE001
         logger.exception("Error en el canal WebSocket.")
         await websocket.close(code=1011)
+
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)

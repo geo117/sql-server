@@ -1,0 +1,10 @@
+{
+  "run_id": "audit-2026-10-17-01",
+  "repo": "sql-server",
+  "target": "D:\\DELL\\Documents\\codigo_practica\\opencode\\sql-server",
+  "source_ref": "HEAD",
+  "profile": "standard",
+  "scope_paths": ["backend", "frontend"],
+  "execution_policy": "sandboxed-source-and-local-only",
+  "run_status": "completed"
+}

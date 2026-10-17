@@ -1,6 +1,8 @@
 /**
- * Preferencias del operador, persistidas en localStorage.
+ * Preferencias del operador, persistidas en sessionStorage.
  * Se validan al cargar para no arrastrar valores corruptos.
+ * Nota: sessionStorage se limpia al cerrar la pestaña/navegador, reduciendo
+ * el periodo de exposición de la API key en caso de XSS.
  */
 
 const STORAGE_KEY = 'sqlmon.settings.v1'
@@ -65,7 +67,7 @@ let cache = null
 export function getSettings() {
   if (cache) return cache
   try {
-    const stored = window.localStorage.getItem(STORAGE_KEY)
+    const stored = window.sessionStorage.getItem(STORAGE_KEY)
     cache = stored ? normalize(JSON.parse(stored)) : { ...DEFAULT_SETTINGS }
   } catch {
     cache = { ...DEFAULT_SETTINGS }
@@ -76,7 +78,7 @@ export function getSettings() {
 export function saveSettings(partial) {
   cache = normalize({ ...getSettings(), ...partial })
   try {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(cache))
+    window.sessionStorage.setItem(STORAGE_KEY, JSON.stringify(cache))
   } catch {
     /* almacenamiento no disponible: se conserva solo en memoria */
   }
@@ -86,7 +88,7 @@ export function saveSettings(partial) {
 export function resetSettings() {
   cache = { ...DEFAULT_SETTINGS }
   try {
-    window.localStorage.removeItem(STORAGE_KEY)
+    window.sessionStorage.removeItem(STORAGE_KEY)
   } catch {
     /* ignore */
   }
