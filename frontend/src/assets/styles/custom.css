@@ -54,6 +54,7 @@
 
   /* Layout */
   --sidebar-w: 250px;
+  --sidebar-w-collapsed: 76px;
   --topbar-h: 68px;
   --content-max: 1600px;
 
@@ -212,6 +213,18 @@ h6 {
   min-height: 100dvh;
 }
 
+/* En escritorio el sidebar arranca compacto (solo iconos) y se expande
+   desde el botón de hamburguesa de la navbar. */
+@media (min-width: 1025px) {
+  .app-shell {
+    grid-template-columns: var(--sidebar-w-collapsed) minmax(0, 1fr);
+    transition: grid-template-columns var(--dur) var(--ease-out);
+  }
+  .app-shell.is-sidebar-open {
+    grid-template-columns: var(--sidebar-w) minmax(0, 1fr);
+  }
+}
+
 .app-main {
   display: flex;
   flex-direction: column;
@@ -289,6 +302,18 @@ h6 {
   font-size: 1.0625rem;
   letter-spacing: -0.02em;
   line-height: 1.1;
+}
+
+.brand__text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  max-width: 220px;
+  overflow: hidden;
+  white-space: nowrap;
+  transition:
+    opacity var(--dur-fast) var(--ease-out),
+    max-width var(--dur) var(--ease-out);
 }
 
 .brand__tagline {
@@ -370,6 +395,12 @@ h6 {
   color: #fff;
 }
 
+.nav-item__label {
+  overflow: hidden;
+  white-space: nowrap;
+  transition: opacity var(--dur-fast) var(--ease-out);
+}
+
 .sidebar__footer {
   margin-top: auto;
 }
@@ -410,6 +441,72 @@ h6 {
   white-space: nowrap;
 }
 
+/* Sidebar compacto: solo iconos. Aplica en escritorio; en móvil el sidebar
+   sigue funcionando como drawer de ancho completo. */
+@media (min-width: 1025px) {
+  .app-sidebar {
+    transition: padding var(--dur) var(--ease-out);
+  }
+
+  .app-sidebar:not(.is-open) {
+    padding-left: var(--sp-2);
+    padding-right: var(--sp-2);
+  }
+
+  .app-sidebar:not(.is-open) .brand {
+    justify-content: center;
+    gap: 0;
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  .app-sidebar:not(.is-open) .brand__text {
+    max-width: 0;
+    opacity: 0;
+  }
+
+  .app-sidebar:not(.is-open) .nav-label {
+    display: block;
+    height: 1px;
+    margin: var(--sp-2) 0;
+    padding: 0;
+    font-size: 0;
+    line-height: 0;
+    background: var(--border);
+    overflow: hidden;
+  }
+
+  .app-sidebar:not(.is-open) .nav-item {
+    justify-content: center;
+    gap: 0;
+  }
+
+  .app-sidebar:not(.is-open) .nav-item__label {
+    width: 0;
+    opacity: 0;
+  }
+
+  .app-sidebar:not(.is-open) .nav-item.active::before {
+    left: calc(-1 * var(--sp-2));
+  }
+
+  .app-sidebar:not(.is-open) .nav-item__badge {
+    position: absolute;
+    top: 3px;
+    right: 7px;
+    margin-left: 0;
+    min-width: 16px;
+    padding: 0 4px;
+    font-size: 0.625rem;
+    line-height: 16px;
+    box-shadow: 0 0 0 2px var(--bg-elevated);
+  }
+
+  .app-sidebar:not(.is-open) .sidebar__footer {
+    display: none;
+  }
+}
+
 /* --------------------------------------------------------------------------
    6. Topbar (Navbar)
    -------------------------------------------------------------------------- */
@@ -429,7 +526,7 @@ h6 {
 }
 
 .topbar__menu {
-  display: none;
+  display: inline-grid;
 }
 
 .topbar__heading {
@@ -1081,6 +1178,19 @@ h6 {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* La columna Usuario parte los logins de más de 10 caracteres en varias
+   líneas para que la tabla no gane ancho y Acciones permanezca visible. */
+.data-table tbody td.cell-user {
+  white-space: normal;
+  overflow-wrap: break-word;
+}
+
+.cell-user__name {
+  display: block;
+  max-width: 12ch;
+  white-space: normal;
 }
 
 .data-table tbody tr.row-warning td:first-child {

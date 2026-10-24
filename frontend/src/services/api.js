@@ -8,7 +8,9 @@
 
 import { getSettings, sanitizeBaseUrl } from './settings'
 
-const DEFAULT_TIMEOUT_MS = 12000
+// El backend puede esperar hasta DB_TIMEOUT (15 s) por el login a SQL Server,
+// por lo que el cliente debe dar margen suficiente antes de abortar.
+const DEFAULT_TIMEOUT_MS = 20000
 
 export class ApiError extends Error {
   constructor(message, { status = 0, cause = null } = {}) {
@@ -80,7 +82,7 @@ async function request(path, options = {}) {
 }
 
 export function getHealth(signal) {
-  return request('/api/health', { signal, timeoutMs: 5000 })
+  return request('/api/health', { signal, timeoutMs: 20000 })
 }
 
 export function getActiveProcesses(signal) {
@@ -122,10 +124,10 @@ export function killProcess(spid) {
   if (!Number.isInteger(normalized) || normalized <= 0) {
     return Promise.reject(new ApiError('SPID inválido.', { status: 0 }))
   }
-  return request(`/api/kill-process/${normalized}`, { method: 'POST', timeoutMs: 15000 })
+  return request(`/api/kill-process/${normalized}`, { method: 'POST', timeoutMs: 20000 })
 }
 
 /** Prueba una configuración concreta sin guardarla. */
 export async function testConnection({ baseUrl, apiKey } = {}) {
-  return request('/api/health', { baseUrl, apiKey, timeoutMs: 6000 })
+  return request('/api/health', { baseUrl, apiKey, timeoutMs: 20000 })
 }

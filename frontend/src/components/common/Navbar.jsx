@@ -13,7 +13,7 @@ const ROUTE_META = {
   '/ajustes': { kicker: 'Configuración', title: 'Ajustes y conexión' },
 }
 
-export default function Navbar({ onOpenSidebar }) {
+export default function Navbar({ sidebarOpen = false, onToggleSidebar }) {
   const { pathname } = useLocation()
   const now = useNow(1000)
   const { connection, lastUpdated, isRefreshing, refresh, settings, updateSettings, error } =
@@ -26,9 +26,11 @@ export default function Navbar({ onOpenSidebar }) {
       <button
         type="button"
         className="icon-btn topbar__menu"
-        onClick={onOpenSidebar}
-        aria-label="Abrir menú de navegación"
+        onClick={onToggleSidebar}
+        aria-label={sidebarOpen ? 'Contraer menú de navegación' : 'Expandir menú de navegación'}
+        aria-expanded={sidebarOpen}
         aria-controls="app-sidebar"
+        title={sidebarOpen ? 'Contraer menú' : 'Expandir menú'}
       >
         <FaBars />
       </button>

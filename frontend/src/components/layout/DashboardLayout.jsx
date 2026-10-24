@@ -8,18 +8,18 @@ export default function DashboardLayout() {
   const { pathname } = useLocation()
   const [openPath, setOpenPath] = useState(null)
 
-  // El drawer se considera abierto solo para la ruta actual.
-  // Al navegar, `pathname` cambia y el menú se cierra sin necesidad de un efecto.
-  const menuOpen = openPath === pathname
+  // El sidebar se considera expandido solo para la ruta actual.
+  // Al navegar, `pathname` cambia y vuelve a su estado compacto (solo iconos).
+  const sidebarOpen = openPath === pathname
 
   useEffect(() => {
-    if (!menuOpen) return undefined
+    if (!sidebarOpen) return undefined
     const onKeyDown = (event) => {
       if (event.key === 'Escape') setOpenPath(null)
     }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
-  }, [menuOpen])
+  }, [sidebarOpen])
 
   useEffect(() => {
     const target = document.getElementById('main-content')
@@ -27,14 +27,14 @@ export default function DashboardLayout() {
   }, [pathname])
 
   return (
-    <div className="app-shell">
+    <div className={`app-shell${sidebarOpen ? ' is-sidebar-open' : ''}`}>
       <a className="skip-link" href="#main-content">
         Saltar al contenido
       </a>
 
-      <Sidebar open={menuOpen} onNavigate={() => setOpenPath(null)} />
+      <Sidebar open={sidebarOpen} onNavigate={() => setOpenPath(null)} />
 
-      {menuOpen ? (
+      {sidebarOpen ? (
         <button
           type="button"
           className="scrim"
@@ -44,7 +44,10 @@ export default function DashboardLayout() {
       ) : null}
 
       <div className="app-main">
-        <Navbar onOpenSidebar={() => setOpenPath(pathname)} />
+        <Navbar
+          sidebarOpen={sidebarOpen}
+          onToggleSidebar={() => setOpenPath(sidebarOpen ? null : pathname)}
+        />
         <main className="app-content" id="main-content" tabIndex={-1}>
           <Outlet />
         </main>

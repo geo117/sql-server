@@ -25,7 +25,7 @@ export default function Sidebar({ open = false, onNavigate }) {
         <span className="brand__mark">
           <BrandMark size={24} />
         </span>
-        <span>
+        <span className="brand__text">
           <span className="brand__name">SQL Server</span>
           <span className="brand__tagline">Monitor</span>
         </span>
@@ -39,10 +39,12 @@ export default function Sidebar({ open = false, onNavigate }) {
             to={item.to}
             end={item.end}
             onClick={onNavigate}
+            aria-label={item.label}
+            title={open ? undefined : item.label}
             className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}
           >
             {item.icon}
-            <span>{item.label}</span>
+            <span className="nav-item__label">{item.label}</span>
             {item.badge === 'blocked' && blockedCount > 0 ? (
               <span className="nav-item__badge" aria-label={`${blockedCount} bloqueos activos`}>
                 {blockedCount}

@@ -39,11 +39,18 @@ DB_DRIVER = os.getenv("DB_DRIVER", "{ODBC Driver 17 for SQL Server}")
 DB_TRUSTED_CONNECTION = _env_bool("DB_TRUSTED_CONNECTION", False)
 DB_ENCRYPT = os.getenv("DB_ENCRYPT", "yes")
 DB_TRUST_SERVER_CERTIFICATE = os.getenv("DB_TRUST_SERVER_CERTIFICATE", "no")
-DB_TIMEOUT = int(os.getenv("DB_TIMEOUT", "5"))
+DB_TIMEOUT = int(os.getenv("DB_TIMEOUT", "15"))
 
 
 def build_connection_string() -> str:
     """Construye la cadena ODBC segun el modo de autenticacion activo."""
+    if DB_TRUSTED_CONNECTION and (DB_USER or DB_PASSWORD):
+        raise RuntimeError(
+            "Configuración de base de datos contradictoria: DB_TRUSTED_CONNECTION=yes "
+            "(autenticación Windows) requiere dejar DB_USER y DB_PASSWORD vacíos. "
+            "Si usas autenticación SQL Server, define DB_TRUSTED_CONNECTION=no."
+        )
+
     if not DB_TRUSTED_CONNECTION and (not DB_USER or not DB_PASSWORD):
         raise RuntimeError(
             "Configuración de base de datos incompleta: DB_TRUSTED_CONNECTION=no "
@@ -67,13 +74,23 @@ def build_connection_string() -> str:
     return ";".join(parts) + ";"
 
 
-def get_db_connection() -> pyodbc.Connection:
+def get_db_connection(autocommit: bool = False) -> pyodbc.Connection:
     """Abre una conexion nueva.
 
     Devuelve la conexion directamente (como en la especificacion). El llamador
     es responsable de cerrarla, p. ej. con `contextlib.closing(get_db_connection())`.
+
+    Con ``autocommit=False`` (por defecto) la primera sentencia abre una
+    transaccion implicita que solo termina con commit/rollback o al cerrar la
+    conexion. Algunas sentencias, como ``KILL``, no pueden ejecutarse dentro de
+    una transaccion de usuario (SQL Server error 6115), por lo que esos casos
+    deben usar ``autocommit=True``.
     """
-    return pyodbc.connect(build_connection_string(), timeout=DB_TIMEOUT)
+    return pyodbc.connect(
+        build_connection_string(),
+        timeout=DB_TIMEOUT,
+        autocommit=autocommit,
+    )
 
 
 def _to_json_safe(value: Any) -> Any:

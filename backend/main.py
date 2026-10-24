@@ -218,7 +218,7 @@ ORDER BY record.value('(./Record/@id)[1]', 'bigint') DESC;
 # Endpoints
 # --------------------------------------------------------------------------- #
 @app.get("/api/health", tags=["sistema"])
-async def health() -> dict[str, Any]:
+def health() -> dict[str, Any]:
     """Comprueba que el API responde y si la base de datos es alcanzable."""
     try:
         with closing(get_db_connection()) as conn:
@@ -232,7 +232,7 @@ async def health() -> dict[str, Any]:
 
 
 @app.get("/api/active-processes", tags=["monitoreo"], dependencies=[Depends(require_api_key)])
-async def active_processes() -> dict[str, Any]:
+def active_processes() -> dict[str, Any]:
     """Procesos de usuario activos con CPU, I/O y duracion."""
     try:
         with closing(get_db_connection()) as conn:
@@ -245,7 +245,7 @@ async def active_processes() -> dict[str, Any]:
 
 
 @app.get("/api/blocked-processes", tags=["monitoreo"], dependencies=[Depends(require_api_key)])
-async def blocked_processes() -> dict[str, Any]:
+def blocked_processes() -> dict[str, Any]:
     """Sesiones bloqueadas y el texto del proceso bloqueador."""
     try:
         with closing(get_db_connection()) as conn:
@@ -258,7 +258,7 @@ async def blocked_processes() -> dict[str, Any]:
 
 
 @app.get("/api/server-stats", tags=["monitoreo"], dependencies=[Depends(require_api_key)])
-async def server_stats() -> dict[str, Any]:
+def server_stats() -> dict[str, Any]:
     """Resumen de CPU, conexiones, bloqueos e informacion del servidor."""
     try:
         with closing(get_db_connection()) as conn:
@@ -293,7 +293,7 @@ async def server_stats() -> dict[str, Any]:
     tags=["acciones"],
     dependencies=[Depends(require_api_key)],
 )
-async def kill_process(spid: str, request: Request) -> dict[str, Any]:
+def kill_process(spid: str, request: Request) -> dict[str, Any]:
     """
     Termina la sesion indicada por su SPID.
 
@@ -321,7 +321,11 @@ async def kill_process(spid: str, request: Request) -> dict[str, Any]:
     _enforce_kill_rate_limit(client_id)
 
     try:
-        with closing(get_db_connection()) as conn:
+        # Conexion dedicada en modo autocommit: pyodbc abre una transaccion
+        # implicita con la primera sentencia y SQL Server rechaza KILL dentro de
+        # una transaccion de usuario (error 6115). En autocommit cada sentencia
+        # se confirma sola, incluida la validacion previa.
+        with closing(get_db_connection(autocommit=True)) as conn:
             with conn.cursor() as cursor:
                 cursor.execute(
                     "SELECT is_user_process FROM sys.dm_exec_sessions WHERE session_id = ?",
@@ -341,7 +345,6 @@ async def kill_process(spid: str, request: Request) -> dict[str, Any]:
 
                 # KILL no admite parametros; el valor ya esta validado como entero en rango.
                 cursor.execute(f"KILL {spid_int}")
-                conn.commit()
 
         logger.warning("Sesion %s terminada por solicitud del operador.", spid_int)
         return {"success": True, "spid": spid_int, "message": f"Sesion {spid_int} terminada."}

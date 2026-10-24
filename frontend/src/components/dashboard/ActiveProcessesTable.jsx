@@ -25,6 +25,22 @@ const FILTERS = {
   slow: 'Solo consultas lentas',
 }
 
+/* Los logins largos se parten cada 10 caracteres: así la columna no ensancha
+   la tabla, no aparece scroll horizontal y "Acciones" no se desplaza. */
+const USER_WRAP_AT = 10
+
+function LoginName({ value }) {
+  const name = value ?? '—'
+  if (name.length <= USER_WRAP_AT) return name
+
+  const chunks = []
+  for (let index = 0; index < name.length; index += USER_WRAP_AT) {
+    if (index > 0) chunks.push(<wbr key={`break-${index}`} />)
+    chunks.push(name.slice(index, index + USER_WRAP_AT))
+  }
+  return chunks
+}
+
 function compare(a, b, key, numeric) {
   if (numeric) return toNumber(a[key]) - toNumber(b[key])
   return String(a[key] ?? '').localeCompare(String(b[key] ?? ''), 'es')
@@ -191,7 +207,11 @@ export default function ActiveProcessesTable({
                 return (
                   <tr key={row.session_id ?? `${row.login_name}-${elapsed}`} className={rowClass}>
                     <td className="mono">{row.session_id}</td>
-                    <td>{row.login_name ?? '—'}</td>
+                    <td className="cell-user" title={row.login_name ?? ''}>
+                      <span className="cell-user__name">
+                        <LoginName value={row.login_name} />
+                      </span>
+                    </td>
                     <td className="cell-truncate" title={row.host_name ?? ''}>
                       {row.host_name ?? '—'}
                     </td>

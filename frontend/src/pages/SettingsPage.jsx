@@ -56,7 +56,7 @@ export default function SettingsPage() {
   return (
     <div className="settings-grid">
       <div className="stack">
-        <section className="panel">
+        {/*<section className="panel">
           <div className="panel__head">
             <h2 className="panel__title">Conexión al backend</h2>
             <span className="count-chip" data-tone={connection === 'offline' ? 'danger' : undefined}>
@@ -121,7 +121,7 @@ export default function SettingsPage() {
               </Button>
             </div>
           </div>
-        </section>
+        </section>*/}
 
         <section className="panel">
           <div className="panel__head">
