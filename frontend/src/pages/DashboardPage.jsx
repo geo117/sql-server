@@ -1,5 +1,7 @@
+import { useState } from 'react'
 import {
   FaDatabase,
+  FaGears,
   FaLinkSlash,
   FaMicrochip,
   FaPlug,
@@ -7,7 +9,9 @@ import {
 } from 'react-icons/fa6'
 
 import ActiveProcessesTable from '../components/dashboard/ActiveProcessesTable'
+import AgentJobsPanel from '../components/dashboard/AgentJobsPanel'
 import EngineStrip from '../components/dashboard/EngineStrip'
+import JobDetailModal from '../components/dashboard/JobDetailModal'
 import ProcessDetailModal from '../components/dashboard/ProcessDetailModal'
 import Skeleton from '../components/common/Skeleton'
 import Sparkline from '../components/common/Sparkline'
@@ -15,6 +19,7 @@ import StatCard from '../components/common/StatCard'
 import { useMonitor } from '../context/useMonitor'
 import { useKillProcess } from '../hooks/useKillProcess'
 import { useProcessDetail } from '../hooks/useProcessDetail'
+import { useStopJob } from '../hooks/useStopJob'
 import { formatCompact, formatMs, formatNumber, toNumber } from '../utils/format'
 import { describeActiveProcess, isSlowQuery } from '../utils/process'
 
@@ -51,7 +56,7 @@ function DashboardLoading() {
       </div>
 
       <div className="stat-grid">
-        {Array.from({ length: 4 }).map((_, index) => (
+        {Array.from({ length: 5 }).map((_, index) => (
           <div className="stat-card" key={index}>
             <Skeleton width={96} height={11} />
             <Skeleton width={132} height={30} style={{ marginTop: 14 }} />
@@ -63,6 +68,17 @@ function DashboardLoading() {
       <section className="panel">
         <div className="panel__head">
           <Skeleton width={150} height={16} />
+        </div>
+        <div style={{ padding: 'var(--sp-4) var(--sp-5)' }}>
+          {Array.from({ length: 3 }).map((_, index) => (
+            <Skeleton key={index} height={14} style={{ marginBottom: 16 }} />
+          ))}
+        </div>
+      </section>
+
+      <section className="panel" style={{ marginTop: 'var(--sp-5)' }}>
+        <div className="panel__head">
+          <Skeleton width={170} height={16} />
         </div>
         <div style={{ padding: 'var(--sp-4) var(--sp-5)' }}>
           {Array.from({ length: 7 }).map((_, index) => (
@@ -78,6 +94,7 @@ export default function DashboardPage() {
   const {
     activeProcesses,
     serverStats,
+    jobs,
     history,
     settings,
     connection,
@@ -88,6 +105,11 @@ export default function DashboardPage() {
   } = useMonitor()
   const { process, open, close } = useProcessDetail()
   const { terminate } = useKillProcess()
+  const { stop: stopAgentJob, stoppingJob } = useStopJob()
+
+  // El modal guarda el job elegido y se refresca con cada lectura mientras siga
+  // existiendo, para que el estado y el script mostrados no queden obsoletos.
+  const [selectedJob, setSelectedJob] = useState(null)
 
   const stats = serverStats?.stats ?? {}
   const server = serverStats?.server ?? {}
@@ -101,6 +123,19 @@ export default function DashboardPage() {
   const totalLogicalReads = toNumber(stats.total_logical_reads)
   const totalWrites = toNumber(stats.total_writes)
 
+  // Jobs del Agente: el endpoint puede responder `available: false` cuando el
+  // login no tiene permisos sobre msdb; en ese caso se muestra "—" sin ruido.
+  const jobsUnavailable = jobs !== null && jobs.available === false
+  const jobsSummary = jobs?.summary ?? {}
+  const jobRows = Array.isArray(jobs?.jobs) ? jobs.jobs : []
+  const runningJobs = toNumber(jobsSummary.running_jobs) || jobRows.filter((j) => j.is_running).length
+  const enabledJobs = toNumber(jobsSummary.enabled_jobs)
+  const failedJobs = toNumber(jobsSummary.failed_last_24h)
+
+  const liveSelectedJob = selectedJob
+    ? jobRows.find((job) => job.job_id === selectedJob.job_id) ?? selectedJob
+    : null
+
   const slowCount = activeProcesses.filter((row) =>
     isSlowQuery(row.elapsed_time_ms, slowQueryMs),
   ).length
@@ -109,6 +144,10 @@ export default function DashboardPage() {
 
   const handleView = (row) => open(describeActiveProcess(row))
   const handleKill = async (row) => terminate(describeActiveProcess(row))
+  const handleViewJobScript = (job) => setSelectedJob(job)
+  const handleStopJob = async (job) => {
+    await stopAgentJob(job)
+  }
 
   return (
     <>
@@ -166,6 +205,19 @@ export default function DashboardPage() {
               hint={`CPU medio por consulta ${formatMs(avgCpu)}`}
             />
             <StatCard
+              label="Jobs del Agente"
+              value={jobsUnavailable ? '—' : formatNumber(runningJobs)}
+              unit={jobsUnavailable ? undefined : 'en curso'}
+              icon={<FaGears aria-hidden="true" />}
+              tone={jobsUnavailable ? 'info' : failedJobs > 0 ? 'warning' : 'success'}
+              pulse={runningJobs > 0}
+              hint={
+                jobsUnavailable
+                  ? 'Sin acceso a msdb o Agente no disponible'
+                  : `${formatNumber(enabledJobs)} habilitados · ${formatNumber(failedJobs)} fallidos (24 h)`
+              }
+            />
+            <StatCard
               label="Carga de E/S"
               value={formatCompact(totalLogicalReads)}
               unit="lecturas"
@@ -194,7 +246,22 @@ export default function DashboardPage() {
               data={history.map((point) => point.cpu)}
               color="var(--warning)"
             />
+            <Vital
+              label="Jobs"
+              value={jobsUnavailable ? '—' : runningJobs}
+              data={history.map((point) => point.jobs)}
+              color="var(--info)"
+            />
           </div>
+
+          <AgentJobsPanel
+            rows={jobRows}
+            available={!jobsUnavailable}
+            detail={jobs?.detail ?? null}
+            onViewScript={handleViewJobScript}
+            onStop={handleStopJob}
+            stoppingJob={stoppingJob}
+          />
 
           <ActiveProcessesTable
             rows={activeProcesses}
@@ -215,6 +282,14 @@ export default function DashboardPage() {
           const done = await terminate(value)
           if (done) close()
         }}
+      />
+
+      <JobDetailModal
+        show={liveSelectedJob !== null}
+        job={liveSelectedJob}
+        stopping={stoppingJob !== null && stoppingJob === liveSelectedJob?.job_name}
+        onHide={() => setSelectedJob(null)}
+        onStop={handleStopJob}
       />
     </>
   )

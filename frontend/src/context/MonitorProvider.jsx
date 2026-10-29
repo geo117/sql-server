@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
-import { fetchSnapshot, killProcess as apiKillProcess } from '../services/api'
+import { fetchSnapshot, killProcess as apiKillProcess, stopJob as apiStopJob } from '../services/api'
 import { getSettings, resetSettings, saveSettings } from '../services/settings'
 import { MonitorContext } from './monitorContext'
 
@@ -10,12 +10,14 @@ export function MonitorProvider({ children }) {
   const [activeProcesses, setActiveProcesses] = useState([])
   const [blockedProcesses, setBlockedProcesses] = useState([])
   const [serverStats, setServerStats] = useState(null)
+  const [jobs, setJobs] = useState(null)
   const [connection, setConnection] = useState('connecting')
   const [error, setError] = useState(null)
   const [lastUpdated, setLastUpdated] = useState(null)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [history, setHistory] = useState([])
   const [killingSpid, setKillingSpid] = useState(null)
+  const [stoppingJob, setStoppingJob] = useState(null)
   const [settings, setSettings] = useState(() => getSettings())
 
   const inFlight = useRef(false)
@@ -43,14 +45,15 @@ export function MonitorProvider({ children }) {
       const snapshot = await fetchSnapshot(controller.signal)
       if (!mountedRef.current || controller.signal.aborted) return
 
-      const succeeded = 3 - snapshot.errors.length
-      setConnection(succeeded === 3 ? 'online' : succeeded === 0 ? 'offline' : 'degraded')
+      const succeeded = 4 - snapshot.errors.length
+      setConnection(succeeded === 4 ? 'online' : succeeded === 0 ? 'offline' : 'degraded')
       setError(snapshot.errors.length ? snapshot.errors[0].message : null)
 
       // Se conserva el último dato válido de cada endpoint que haya fallado.
       if (snapshot.activeProcesses) setActiveProcesses(snapshot.activeProcesses)
       if (snapshot.blockedProcesses) setBlockedProcesses(snapshot.blockedProcesses)
       if (snapshot.serverStats) setServerStats(snapshot.serverStats)
+      if (snapshot.jobs) setJobs(snapshot.jobs)
 
       if (succeeded > 0) {
         const timestamp = Date.now()
@@ -66,6 +69,9 @@ export function MonitorProvider({ children }) {
               sessions: Number(stats.active_sessions ?? snapshot.activeProcesses?.length ?? 0),
               blocked: Number(stats.blocked_sessions ?? snapshot.blockedProcesses?.length ?? 0),
               cpu: Number(cpu ?? 0),
+              jobs: Number(
+                snapshot.jobs?.summary?.running_jobs ?? snapshot.jobs?.running?.length ?? 0,
+              ),
             },
           ].slice(-HISTORY_LIMIT),
         )
@@ -123,22 +129,41 @@ export function MonitorProvider({ children }) {
     [refresh],
   )
 
+  const stopAgentJob = useCallback(
+    async (jobName) => {
+      setStoppingJob(jobName)
+      try {
+        const result = await apiStopJob(jobName)
+        await refresh()
+        return { ok: true, message: result?.message ?? `Job '${jobName}' detenido.` }
+      } catch (failure) {
+        return { ok: false, message: failure?.message ?? 'No se pudo detener el job.' }
+      } finally {
+        if (mountedRef.current) setStoppingJob(null)
+      }
+    },
+    [refresh],
+  )
+
   const value = useMemo(
     () => ({
       activeProcesses,
       blockedProcesses,
       serverStats,
+      jobs,
       connection,
       error,
       lastUpdated,
       isRefreshing,
       history,
       killingSpid,
+      stoppingJob,
       settings,
       refresh,
       updateSettings,
       resetAllSettings,
       killSession,
+      stopAgentJob,
       activeCount: activeProcesses.length,
       blockedCount: blockedProcesses.length,
     }),
@@ -146,17 +171,20 @@ export function MonitorProvider({ children }) {
       activeProcesses,
       blockedProcesses,
       serverStats,
+      jobs,
       connection,
       error,
       lastUpdated,
       isRefreshing,
       history,
       killingSpid,
+      stoppingJob,
       settings,
       refresh,
       updateSettings,
       resetAllSettings,
       killSession,
+      stopAgentJob,
     ],
   )
 

@@ -54,6 +54,19 @@ export function formatClock(timestamp) {
   })
 }
 
+/** Fecha y hora cortas: "31/01, 10:15". Para la última ejecución de un job. */
+export function formatShortDateTime(timestamp) {
+  if (!timestamp) return '—'
+  const date = timestamp instanceof Date ? timestamp : new Date(timestamp)
+  if (Number.isNaN(date.getTime())) return '—'
+  return date.toLocaleString('es-ES', {
+    day: '2-digit',
+    month: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
+
 /** Tiempo relativo corto: "hace 3 s". */
 export function timeAgo(timestamp, now = Date.now()) {
   if (!timestamp) return '—'

@@ -97,24 +97,31 @@ export function getServerStats(signal) {
   return request('/api/server-stats', { signal })
 }
 
+export function getJobs(signal) {
+  return request('/api/jobs', { signal })
+}
+
 /**
- * Ejecuta las tres lecturas en paralelo. Nunca rechaza: informa qué respondió.
+ * Ejecuta las lecturas en paralelo. Nunca rechaza: informa qué respondió.
  */
 export async function fetchSnapshot(signal) {
-  const [active, blocked, stats] = await Promise.allSettled([
+  const [active, blocked, stats, jobs] = await Promise.allSettled([
     getActiveProcesses(signal),
     getBlockedProcesses(signal),
     getServerStats(signal),
+    getJobs(signal),
   ])
 
   return {
     activeProcesses: active.status === 'fulfilled' ? active.value?.data ?? [] : null,
     blockedProcesses: blocked.status === 'fulfilled' ? blocked.value?.data ?? [] : null,
     serverStats: stats.status === 'fulfilled' ? stats.value ?? null : null,
+    jobs: jobs.status === 'fulfilled' ? jobs.value ?? null : null,
     errors: [
       active.status === 'rejected' ? active.reason : null,
       blocked.status === 'rejected' ? blocked.reason : null,
       stats.status === 'rejected' ? stats.reason : null,
+      jobs.status === 'rejected' ? jobs.reason : null,
     ].filter(Boolean),
   }
 }
@@ -125,6 +132,18 @@ export function killProcess(spid) {
     return Promise.reject(new ApiError('SPID inválido.', { status: 0 }))
   }
   return request(`/api/kill-process/${normalized}`, { method: 'POST', timeoutMs: 20000 })
+}
+
+/** Detiene un job del Agente (el backend ejecuta EXEC msdb.dbo.sp_stop_job). */
+export function stopJob(jobName) {
+  const name = String(jobName ?? '').trim()
+  if (!name) {
+    return Promise.reject(new ApiError('Nombre de job inválido.', { status: 0 }))
+  }
+  return request(`/api/jobs/stop?name=${encodeURIComponent(name)}`, {
+    method: 'POST',
+    timeoutMs: 30000,
+  })
 }
 
 /** Prueba una configuración concreta sin guardarla. */

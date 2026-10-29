@@ -61,6 +61,47 @@ export async function confirmKillProcess({ spid, role, user, host, program, data
   return second.isConfirmed
 }
 
+/**
+ * Confirmación antes de detener un job del Agente con sp_stop_job.
+ * Es menos destructiva que KILL (el job puede relanzarse), por eso es un solo paso.
+ */
+export async function confirmStopJob({
+  job_name: jobName,
+  status,
+  database_name: database,
+  elapsed_seconds: elapsedSeconds,
+  session_id: sessionId,
+}) {
+  const detail = `
+    <div class="swal-detail">
+      ${detailRow('Job', jobName)}
+      ${detailRow('Estado', status)}
+      ${detailRow('Base de datos', database)}
+      ${detailRow('SPID de la sesión', sessionId)}
+      ${elapsedSeconds ? detailRow('Transcurrido', formatMs(elapsedSeconds * 1000)) : ''}
+    </div>`
+
+  const result = await Swal.fire({
+    ...BASE,
+    icon: 'warning',
+    title: '¿Detener este job?',
+    html: `Se ejecutará <b>EXEC msdb.dbo.sp_stop_job</b> sobre <b>${escapeHtml(
+      jobName,
+    )}</b>. El paso en curso se interrumpirá y el job quedará disponible para volver a lanzarse.${detail}`,
+    showCancelButton: true,
+    confirmButtonText: 'Detener job',
+    cancelButtonText: 'Cancelar',
+    focusCancel: true,
+    customClass: {
+      popup: 'swal-theme',
+      confirmButton: 'swal-btn-danger',
+      cancelButton: 'swal-btn-ghost',
+    },
+  })
+
+  return result.isConfirmed
+}
+
 export function toastSuccess(message) {
   return Swal.fire({
     ...BASE,

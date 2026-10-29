@@ -49,7 +49,7 @@ src/
 
 | Ruta | Vista |
 |---|---|
-| `/` | Panel: métricas, tendencias y tabla de procesos activos. |
+| `/` | Panel: métricas, tendencias, jobs del Agente y tabla de procesos activos. |
 | `/bloqueos` | Cadenas de contención bloqueador ➔ bloqueado. |
 | `/ajustes` | Conexión, API key, umbrales y seguridad. |
 

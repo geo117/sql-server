@@ -767,6 +767,16 @@ h6 {
   border-color: rgba(239, 68, 68, 0.5);
 }
 
+.icon-btn--warning {
+  color: var(--warning);
+}
+
+.icon-btn--warning:hover {
+  background: var(--warning-soft);
+  color: #fcd34d;
+  border-color: rgba(245, 158, 11, 0.5);
+}
+
 .icon-btn:disabled {
   opacity: 0.45;
   cursor: not-allowed;
@@ -840,7 +850,9 @@ h6 {
    -------------------------------------------------------------------------- */
 .stat-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  /* auto-fit deja que las 5 tarjetas entren en una fila en pantallas anchas y
+     se reacomoden solas en cuanto el espacio se reduce. */
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
   gap: var(--sp-4);
   margin-bottom: var(--sp-5);
 }
@@ -1021,7 +1033,7 @@ h6 {
    -------------------------------------------------------------------------- */
 .vitals {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
   gap: var(--sp-4);
   margin-bottom: var(--sp-5);
 }
@@ -1075,6 +1087,108 @@ h6 {
    -------------------------------------------------------------------------- */
 .table-wrap {
   overflow-x: auto;
+}
+
+/* Panel de jobs del Agente: la sección queda siempre visible sobre la tabla de
+   procesos, así que cuando hay más de 5 filas se limita la altura a la
+   cabecera más cinco filas y el resto se alcanza con scroll vertical. La
+   cabecera de `.data-table` ya es sticky y se queda fija al desplazar. */
+.jobs-panel {
+  margin-bottom: var(--sp-5);
+}
+
+.jobs-scroll.is-scrollable {
+  max-height: 14.75rem;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.jobs-scroll.is-scrollable:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: -2px;
+}
+
+.jobs-scroll__hint {
+  padding: var(--sp-3) var(--sp-5);
+  border-top: 1px solid var(--border);
+}
+
+/* El estado vacío de este panel es permanente: se compacta para que una
+   sección sin jobs no empuje la tabla de procesos fuera de la pantalla. */
+.jobs-panel .state-block {
+  padding: var(--sp-6) var(--sp-5);
+}
+
+.jobs-panel .state-block__icon {
+  width: 40px;
+  height: 40px;
+  font-size: 1rem;
+}
+
+/* La tabla de jobs tiene nueve columnas: se le da un ancho mínimo para que no
+   se aplasten y el contenedor resuelve el resto con scroll horizontal. */
+.jobs-panel .jobs-table {
+  min-width: 1080px;
+}
+
+.jobs-panel .jobs-table .cell-job {
+  max-width: 240px;
+}
+
+.cell-job__name {
+  display: block;
+  font-weight: 600;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cell-job__desc {
+  display: block;
+  max-width: 240px;
+  font-size: 0.6875rem;
+  color: var(--text-dim);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cell-script {
+  max-width: 260px;
+}
+
+.cell-script__code {
+  display: block;
+  max-width: 240px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  color: var(--text-muted);
+}
+
+.job-chip {
+  display: inline-block;
+  margin-bottom: 2px;
+  padding: 1px 6px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  font-family: var(--font-mono);
+  font-size: 0.625rem;
+  letter-spacing: 0.04em;
+  color: var(--text-dim);
+  text-transform: none;
+}
+
+.cell-nowrap {
+  white-space: nowrap;
+}
+
+.text-dim {
+  color: var(--text-dim);
 }
 
 .data-table {
@@ -1544,6 +1658,30 @@ h6 {
   gap: 6px;
 }
 
+/* Mensajes de sysjobhistory: se muestran completos y con salto de línea,
+   porque los errores del Agente vienen con varias líneas de detalle. */
+.message-block {
+  margin: 0;
+  padding: var(--sp-4);
+  max-height: 220px;
+  overflow: auto;
+  background: var(--danger-soft);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  border-radius: var(--radius);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  line-height: 1.6;
+  color: #fecaca;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.message-block--neutral {
+  background: var(--surface-2);
+  border-color: var(--border);
+  color: var(--text-muted);
+}
+
 .section-label {
   display: flex;
   align-items: center;
@@ -1555,7 +1693,6 @@ h6 {
   text-transform: uppercase;
   color: var(--text-dim);
 }
-
 .section-label::after {
   content: '';
   flex: 1;
